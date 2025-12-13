@@ -16,6 +16,24 @@
     <div id="app"></div>
 
     <script>
+        // --- START FIX: Fallback for window.storage ---
+        if (typeof window.storage === 'undefined') {
+            // Define a fallback for the custom window.storage API using standard browser localStorage.
+            // This maintains the original async/await structure used in loadSavedJobs.
+            window.storage = {
+                get: (key) => new Promise(resolve => {
+                    const value = localStorage.getItem(key);
+                    // Wrap the value in an object to match the expected return structure
+                    resolve({ value: value }); 
+                }),
+                set: (key, value) => new Promise(resolve => {
+                    localStorage.setItem(key, value);
+                    resolve();
+                })
+            };
+        }
+        // --- END FIX ---
+        
         const state = {
             jobs: [],
             filteredJobs: [],
@@ -39,6 +57,7 @@
         // Load saved jobs from storage
         async function loadSavedJobs() {
             try {
+                // This now uses the standard localStorage via the fallback 'window.storage' object
                 const result = await window.storage.get('saved-jobs');
                 if (result && result.value) {
                     const savedJobIds = JSON.parse(result.value);
@@ -55,6 +74,7 @@
         async function saveSavedJobsToStorage() {
             try {
                 const jobIds = Array.from(state.savedJobs);
+                // This now uses the standard localStorage via the fallback 'window.storage' object
                 await window.storage.set('saved-jobs', JSON.stringify(jobIds));
             } catch (error) {
                 console.error('Error saving jobs:', error);
