@@ -153,6 +153,7 @@
         }
 
         async function filterJobs() {
+            state.hasSearched = true;
             if (state.searchTerm || state.locationFilter || state.categoryFilter) {
                 state.hasSearched = true;
             }
@@ -614,6 +615,7 @@
         async function runSearch() {
             state.hasSearched = true;
             await filterJobs();
+            render();
         }
 
         async function updateCategory(value) {
