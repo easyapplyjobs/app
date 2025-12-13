@@ -16,24 +16,6 @@
     <div id="app"></div>
 
     <script>
-        // --- START FIX: Fallback for window.storage ---
-        if (typeof window.storage === 'undefined') {
-            // Define a fallback for the custom window.storage API using standard browser localStorage.
-            // This maintains the original async/await structure used in loadSavedJobs.
-            window.storage = {
-                get: (key) => new Promise(resolve => {
-                    const value = localStorage.getItem(key);
-                    // Wrap the value in an object to match the expected return structure
-                    resolve({ value: value }); 
-                }),
-                set: (key, value) => new Promise(resolve => {
-                    localStorage.setItem(key, value);
-                    resolve();
-                })
-            };
-        }
-        // --- END FIX ---
-        
         const state = {
             jobs: [],
             filteredJobs: [],
@@ -57,7 +39,6 @@
         // Load saved jobs from storage
         async function loadSavedJobs() {
             try {
-                // This now uses the standard localStorage via the fallback 'window.storage' object
                 const result = await window.storage.get('saved-jobs');
                 if (result && result.value) {
                     const savedJobIds = JSON.parse(result.value);
@@ -74,7 +55,6 @@
         async function saveSavedJobsToStorage() {
             try {
                 const jobIds = Array.from(state.savedJobs);
-                // This now uses the standard localStorage via the fallback 'window.storage' object
                 await window.storage.set('saved-jobs', JSON.stringify(jobIds));
             } catch (error) {
                 console.error('Error saving jobs:', error);
@@ -391,7 +371,7 @@
                 <div class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
                     <div class="max-w-6xl mx-auto px-4 py-5">
                         <div class="flex items-center gap-4 mb-4">
-                            <h1 class="text-3xl font-bold text-[#075A57]">Job Search</h1>
+                            <h1 class="text-3xl font-bold text-[#075A57]">Easy Apply Jobs</h1>
                             
                             <div class="flex gap-2">
                                 <button onclick="setViewMode('all')" 
@@ -412,7 +392,7 @@
                         </div>
                         
                         ${state.viewMode === 'all' ? `
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                 <div class="relative">
                                     <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -421,7 +401,8 @@
                                         id="searchInput"
                                         type="text"
                                         placeholder="Search by job title or company..."
-                                        oninput="updateSearch(this.value)"
+                                        oninput="state.searchTerm = this.value"
+                                        onkeydown="if(event.key === 'Enter'){ runSearch(); }"
                                         class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00917C] focus:border-transparent transition-all"
                                     />
                                 </div>
@@ -434,10 +415,17 @@
                                         id="locationInput"
                                         type="text"
                                         placeholder="Search by location..."
-                                        oninput="updateLocation(this.value)"
+                                        oninput="state.locationFilter = this.value"
+                                        onkeydown="if(event.key === 'Enter'){ runSearch(); }"
                                         class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00917C] focus:border-transparent transition-all"
                                     />
                                 </div>
+                                
+                                <button onclick="runSearch()"
+                                    class="w-full h-full bg-[#00917C] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#075A57] transition-colors">
+                                    Search Jobs
+                                </button>
+
                             </div>
 
                             <button onclick="toggleFilters()" class="flex items-center gap-2 text-[#00917C] font-medium hover:text-[#075A57] transition-colors mb-3">
@@ -613,22 +601,19 @@
         }
 
         let searchTimeout = null;
-        let locationTimeout = null;
+        let locationTimeout = null; // kept for compatibility
 
         function updateSearch(value) {
             state.searchTerm = value;
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(async () => {
-                await filterJobs();
-            }, 300);
         }
 
         function updateLocation(value) {
             state.locationFilter = value;
-            clearTimeout(locationTimeout);
-            locationTimeout = setTimeout(async () => {
-                await filterJobs();
-            }, 300);
+        }
+
+        async function runSearch() {
+            state.hasSearched = true;
+            await filterJobs();
         }
 
         async function updateCategory(value) {
@@ -682,6 +667,7 @@
         window.updateSearch = updateSearch;
         window.updateLocation = updateLocation;
         window.updateCategory = updateCategory;
+        window.runSearch = runSearch;
         window.toggleFilters = toggleFilters;
         window.clearFilters = clearFilters;
         window.selectJob = selectJob;
