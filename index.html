@@ -12,7 +12,7 @@
         .bg-clip-text { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+<body class="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen font-sans">
     <div id="app"></div>
 
     <script>
@@ -81,26 +81,43 @@
             }
         }
 
-        function filterJobs() {
+        async function filterJobs() {
+            // Capture current filter values at the start
+            const searchTerm = state.searchTerm;
+            const locationFilter = state.locationFilter;
+            const categoryFilter = state.categoryFilter;
+            
+            // Use requestIdleCallback or setTimeout to make filtering non-blocking
+            await new Promise(resolve => {
+                requestIdleCallback ? requestIdleCallback(resolve) : setTimeout(resolve, 0);
+            });
+            
+            // Check if filters have changed since we started
+            if (searchTerm !== state.searchTerm || 
+                locationFilter !== state.locationFilter || 
+                categoryFilter !== state.categoryFilter) {
+                return; // Abandon this filter operation
+            }
+            
             let filtered = state.jobs;
 
-            if (state.searchTerm) {
-                const term = state.searchTerm.toLowerCase();
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
                 filtered = filtered.filter(job => 
                     (job['Job Title']?.toLowerCase().includes(term) ||
                      job['Company']?.toLowerCase().includes(term))
                 );
             }
 
-            if (state.locationFilter) {
+            if (locationFilter) {
                 filtered = filtered.filter(job => 
-                    job['Location']?.toLowerCase().includes(state.locationFilter.toLowerCase())
+                    job['Location']?.toLowerCase().includes(locationFilter.toLowerCase())
                 );
             }
 
-            if (state.categoryFilter) {
+            if (categoryFilter) {
                 filtered = filtered.filter(job => 
-                    job['Role Category'] === state.categoryFilter
+                    job['Role Category'] === categoryFilter
                 );
             }
 
@@ -125,9 +142,9 @@
         function renderJobCard(job, index) {
             return `
                 <div onclick="selectJob(${state.filteredJobs.indexOf(job)})" 
-                     class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer transform hover:scale-[1.02]">
+                     class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:border-[#00917C] transition-all cursor-pointer transform hover:scale-[1.02]">
                     <h3 class="font-semibold text-lg text-gray-900 mb-3">${escape(job['Job Title'])}</h3>
-                    <p class="text-blue-600 font-medium mb-3">${escape(job['Company'])}</p>
+                    <p class="text-[#00917C] font-medium mb-3">${escape(job['Company'])}</p>
                     
                     <div class="space-y-2">
                         ${job['Location'] ? `
@@ -151,7 +168,7 @@
                     </div>
                     
                     <div class="mt-4 pt-4 border-t border-gray-100">
-                        <span class="text-sm text-blue-600 font-medium flex items-center">
+                        <span class="text-sm text-[#00917C] font-medium flex items-center">
                             View Details
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -179,7 +196,7 @@
                 pages.push(`<button onclick="changePage(${state.currentPage - 1})" class="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">${state.currentPage - 1}</button>`);
             }
 
-            pages.push(`<button class="px-3 py-2 bg-blue-600 text-white border border-blue-600 rounded-lg">${state.currentPage}</button>`);
+            pages.push(`<button class="px-3 py-2 bg-[#00917C] text-white border border-[#00917C] rounded-lg">${state.currentPage}</button>`);
 
             if (state.currentPage < totalPages) {
                 pages.push(`<button onclick="changePage(${state.currentPage + 1})" class="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">${state.currentPage + 1}</button>`);
@@ -210,17 +227,23 @@
         function render() {
             const app = document.getElementById('app');
             
-            // Preserve input values before re-render
+            // Preserve input values and focus state before re-render
             const searchInput = document.getElementById('searchInput');
             const locationInput = document.getElementById('locationInput');
             const searchValue = searchInput ? searchInput.value : state.searchTerm;
             const locationValue = locationInput ? locationInput.value : state.locationFilter;
+            const searchHasFocus = searchInput && document.activeElement === searchInput;
+            const locationHasFocus = locationInput && document.activeElement === locationInput;
+            const searchSelectionStart = searchInput ? searchInput.selectionStart : null;
+            const searchSelectionEnd = searchInput ? searchInput.selectionEnd : null;
+            const locationSelectionStart = locationInput ? locationInput.selectionStart : null;
+            const locationSelectionEnd = locationInput ? locationInput.selectionEnd : null;
 
             if (state.loading) {
                 app.innerHTML = `
                     <div class="min-h-screen flex items-center justify-center">
                         <div class="text-center">
-                            <svg class="animate-spin h-16 w-16 text-blue-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                            <svg class="animate-spin h-16 w-16 text-[#00917C] mx-auto mb-4" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -241,7 +264,7 @@
                             </svg>
                             <h2 class="text-2xl font-bold text-gray-900 mb-2">Unable to Load Jobs</h2>
                             <p class="text-gray-600 mb-6">${escape(state.error)}</p>
-                            <button onclick="fetchJobs()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                            <button onclick="fetchJobs()" class="bg-[#00917C] text-white px-6 py-3 rounded-lg hover:bg-[#075A57] transition-colors font-medium">
                                 Try Again
                             </button>
                         </div>
@@ -258,13 +281,13 @@
                     <div class="max-w-6xl mx-auto px-4 py-5">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
+                                <h1 class="text-3xl font-bold text-[#075A57]">
                                     Job Search
                                 </h1>
                                 <p class="text-sm text-gray-500 mt-1">${state.jobs.length.toLocaleString()} total jobs</p>
                             </div>
                             <div class="text-right">
-                                <div class="text-2xl font-bold text-blue-600">${state.filteredJobs.length.toLocaleString()}</div>
+                                <div class="text-2xl font-bold text-[#00917C]">${state.filteredJobs.length.toLocaleString()}</div>
                                 <div class="text-xs text-gray-500">matching</div>
                             </div>
                         </div>
@@ -279,7 +302,7 @@
                                     type="text"
                                     placeholder="Search by job title or company..."
                                     oninput="updateSearch(this.value)"
-                                    class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00917C] focus:border-transparent transition-all"
                                 />
                             </div>
                             <div class="relative">
@@ -292,12 +315,12 @@
                                     type="text"
                                     placeholder="Search by location..."
                                     oninput="updateLocation(this.value)"
-                                    class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00917C] focus:border-transparent transition-all"
                                 />
                             </div>
                         </div>
 
-                        <button onclick="toggleFilters()" class="flex items-center gap-2 text-blue-600 font-medium hover:text-blue-700 transition-colors mb-3">
+                        <button onclick="toggleFilters()" class="flex items-center gap-2 text-[#00917C] font-medium hover:text-[#075A57] transition-colors mb-3">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                             </svg>
@@ -310,7 +333,7 @@
                                     <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                     </svg>
-                                    <select id="categorySelect" onchange="updateCategory(this.value)" class="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <select id="categorySelect" onchange="updateCategory(this.value)" class="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#00917C] focus:border-transparent">
                                         <option value="">All Categories</option>
                                         ${state.categories.map(cat => 
                                             `<option value="${escape(cat)}" ${state.categoryFilter === cat ? 'selected' : ''}>${escape(cat)}</option>`
@@ -321,7 +344,7 @@
                         ` : ''}
 
                         ${(state.searchTerm || state.locationFilter || state.categoryFilter) ? `
-                            <button onclick="clearFilters()" class="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                            <button onclick="clearFilters()" class="mt-3 text-sm text-[#00917C] hover:text-[#075A57] font-medium flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -370,7 +393,7 @@
                                 <div class="grid grid-cols-1 gap-4">
                                     ${state.selectedJob['Location'] ? `
                                         <div class="flex items-start">
-                                            <svg class="w-5 h-5 mr-3 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-5 h-5 mr-3 text-[#00917C] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             </svg>
@@ -383,7 +406,7 @@
                                     
                                     ${state.selectedJob['Role Category'] ? `
                                         <div class="flex items-start">
-                                            <svg class="w-5 h-5 mr-3 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-5 h-5 mr-3 text-[#075A57] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                             </svg>
                                             <div>
@@ -396,7 +419,7 @@
 
                                 ${state.selectedJob['URL FOR Job Title'] ? `
                                     <a href="${escape(state.selectedJob['URL FOR Job Title'])}" target="_blank" rel="noopener noreferrer"
-                                       class="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-4 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl">
+                                       class="flex items-center justify-center gap-2 w-full bg-[#00917C] text-white font-semibold py-4 px-6 rounded-xl hover:bg-[#075A57] transition-all shadow-lg hover:shadow-xl">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                         </svg>
@@ -409,15 +432,29 @@
                 ` : ''}
             `;
             
-            // Restore input values after render
+            // Restore input values, focus, and cursor position after render
             setTimeout(() => {
                 const newSearchInput = document.getElementById('searchInput');
                 const newLocationInput = document.getElementById('locationInput');
+                
                 if (newSearchInput && newSearchInput !== searchInput) {
                     newSearchInput.value = searchValue;
+                    if (searchHasFocus) {
+                        newSearchInput.focus();
+                        if (searchSelectionStart !== null && searchSelectionEnd !== null) {
+                            newSearchInput.setSelectionRange(searchSelectionStart, searchSelectionEnd);
+                        }
+                    }
                 }
+                
                 if (newLocationInput && newLocationInput !== locationInput) {
                     newLocationInput.value = locationValue;
+                    if (locationHasFocus) {
+                        newLocationInput.focus();
+                        if (locationSelectionStart !== null && locationSelectionEnd !== null) {
+                            newLocationInput.setSelectionRange(locationSelectionStart, locationSelectionEnd);
+                        }
+                    }
                 }
             }, 0);
         }
@@ -428,22 +465,22 @@
         function updateSearch(value) {
             state.searchTerm = value;
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                filterJobs();
+            searchTimeout = setTimeout(async () => {
+                await filterJobs();
             }, 300);
         }
 
         function updateLocation(value) {
             state.locationFilter = value;
             clearTimeout(locationTimeout);
-            locationTimeout = setTimeout(() => {
-                filterJobs();
+            locationTimeout = setTimeout(async () => {
+                await filterJobs();
             }, 300);
         }
 
-        function updateCategory(value) {
+        async function updateCategory(value) {
             state.categoryFilter = value;
-            filterJobs();
+            await filterJobs();
         }
 
         function toggleFilters() {
